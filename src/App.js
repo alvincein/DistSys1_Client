@@ -76,8 +76,14 @@ export default class App extends React.Component {
     })
     .then(res => {
       const response = res.data;
+      console.log(response)
       this.setState({result : "Νέο υπόλοιπο: " + response.data});
       this.onIdSearch();
+    })
+    .catch(err => {
+      if (err.response.data.message === "error"){
+        this.setState({result : err.response.data.error});
+      }
     })
   }
 
