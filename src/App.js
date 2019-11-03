@@ -77,7 +77,7 @@ export default class App extends React.Component {
     .then(res => {
       const response = res.data;
       console.log(response)
-      this.setState({result : "Νέο υπόλοιπο: " + response.data});
+      this.setState({result : "Νέο υπόλοιπο: " + response.balance + " €"});
       this.onIdSearch();
     })
     .catch(err => {
@@ -110,7 +110,7 @@ export default class App extends React.Component {
                 <p>ID: {this.state.id}</p>
                 <p>Όνομα: {this.state.name}</p>
                 <p>Επώνυμο: {this.state.surname}</p>
-                <p>Υπόλοιπο: {this.state.balance}</p>
+                <p>Υπόλοιπο: {this.state.balance} €</p>
               </div>
 
               }
