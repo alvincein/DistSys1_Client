@@ -105,3 +105,6 @@ dist
 
 # API's URL
 API.js
+
+# RPC's URL
+RPC.js

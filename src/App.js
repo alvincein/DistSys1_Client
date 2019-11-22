@@ -1,8 +1,10 @@
 import React from 'react';
 import './App.css';
 import { Button, Input, Card, Skeleton} from 'antd';
-import API from './utils/API';
 import 'antd/dist/antd.css';
+import { Switch } from 'antd';
+import API from '../src/utils/API'
+import RPC from '../src/utils/RPC'
 
 
 export default class App extends React.Component {
@@ -19,11 +21,14 @@ export default class App extends React.Component {
         result: undefined,
         userFound: false,
         errorMessage: "",
-        isLoading: true
+        isLoading: true,
+        rpcEnabled: false,
+        apiOrRpc: "API"
     };
     this.onChangeId = this.onChangeId.bind(this);
     this.onChangeAmount = this.onChangeAmount.bind(this);
     this.onIdSearch = this.onIdSearch.bind(this);
+    this.onSwitchChange = this.onSwitchChange.bind(this);
   }
 
   onChangeId(event){
@@ -38,53 +43,134 @@ export default class App extends React.Component {
   onIdSearch(){
     if(this.state.tempId !== undefined){
       this.setState({isLoading : true});
-      API.get('members/' + this.state.tempId , {
-        headers : {"Content-Type": "application/x-www-form-urlencoded"}
-      })
-      .then(res => {
-        const response = res.data;
-        console.log(response);
-        if (response.message === "error"){
-          console.log(response.error);
-          this.setState({ 
-            errorMessage : response.error,
-            userFound : false
-        })
-        }
-        else {
-          if(this.state.tempId !== this.state.id){
-            this.setState({result: ""})
-          }
-          this.setState({
-            errorMessage : "",
-            id: this.state.tempId,
-            name : response.data.name,
-            surname : response.data.surname,
-            balance : response.data.balance,
-            userFound : true
+
+      if(!this.state.rpcEnabled){
+
+        // API CALL
+          API.get('members/' + this.state.tempId , {
+            headers : {"Content-Type": "application/x-www-form-urlencoded"}
+          })
+          .then(res => {
+            const response = res.data;
+            console.log(response);
+            if (response.message === "error"){
+              console.log(response.error);
+              this.setState({ 
+                errorMessage : response.error,
+                userFound : false
+            })
+            }
+            else {
+              if(this.state.tempId !== this.state.id){
+                this.setState({result: ""})
+              }
+              this.setState({
+                errorMessage : "",
+                id: this.state.tempId,
+                name : response.data.name,
+                surname : response.data.surname,
+                balance : response.data.balance,
+                userFound : true
+              });
+            this.setState({isLoading : false});
+            }
           });
-        this.setState({isLoading : false});
-        }
-      });
+      }
+      else{
+        // RPC CALL
+        RPC.post('/',{
+          "method" : "getUser",
+          "id" : this.state.tempId
+        })
+        .then(res => {
+          const response = res.data;
+          console.log(response);
+          if (response.message === "error"){
+            console.log(response.error);
+            this.setState({ 
+              errorMessage : response.error,
+              userFound : false
+          })
+          }
+          else {
+            if(this.state.tempId !== this.state.id){
+              this.setState({result: ""})
+            }
+            this.setState({
+              errorMessage : "",
+              id: this.state.tempId,
+              name : response.data.name,
+              surname : response.data.surname,
+              balance : response.data.balance,
+              userFound : true
+            });
+          this.setState({isLoading : false});
+          }
+        });
+
+
+      }
     }
   }
 
   onAction(action){
-    API.post(action,{
-      "id": this.state.id,
-      "amount" : this.state.amount
-    })
-    .then(res => {
-      const response = res.data;
-      console.log(response)
-      this.setState({result : "Νέο υπόλοιπο: " + response.balance + " €"});
-      this.onIdSearch();
-    })
-    .catch(err => {
-      if (err.response.data.message === "error"){
-        this.setState({result : err.response.data.error});
-      }
-    })
+
+    if(!this.state.rpcEnabled){
+      // RESTAPI CALL
+      API.post(action,{
+        "id": this.state.id,
+        "amount" : this.state.amount
+      })
+      .then(res => {
+        const response = res.data;
+        console.log(response)
+        this.setState({result : "Νέο υπόλοιπο: " + response.balance + " €"});
+        this.onIdSearch();
+      })
+      .catch(err => {
+        if (err.response.data.message === "error"){
+          this.setState({result : err.response.data.error});
+        }
+      })
+    }
+
+      else{
+      // RPC CALL
+      RPC.post('/',{
+        "method" : action,
+        "id": this.state.id,
+        "amount" : this.state.amount
+      })
+      .then(res => {
+        const response = res.data;
+        console.log(response)
+        this.setState({result : "Νέο υπόλοιπο: " + response.balance + " €"});
+        this.onIdSearch();
+      })
+      .catch(err => {
+        console.log(err);
+        if (err.response.data.message === "error"){
+          this.setState({result : err.response.data.error});
+        }
+      })
+    }
+  }
+
+  onSwitchChange(){
+    if(this.state.rpcEnabled === false){
+      this.setState({
+        rpcEnabled : !this.state.rpcEnabled,
+        apiOrRpc: "RPC"
+      });
+    }
+    else{
+      this.setState({
+        rpcEnabled : !this.state.rpcEnabled,
+        apiOrRpc: "API"
+      });
+
+    }
+
   }
 
   render(){
@@ -92,6 +178,8 @@ export default class App extends React.Component {
         <div className="App">
           <header className="App-header">
             <h1 style={{color:"#66a8ff"}}>ΑΤΜ</h1>
+            <h2 style={{color:"#ffffff"}}>{this.state.apiOrRpc}</h2>
+            <Switch defaultChecked={this.state.rpcEnabled} onChange={this.onSwitchChange}></Switch>
           <div className="master-flex-row">
             <div className="flex-column-margin">Στοιχεία Μέλους
             <Input placeholder="ID" onChange={this.onChangeId}></Input>
